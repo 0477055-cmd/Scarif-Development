@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "IOT/Inlclude"
+		},
+		{
+			"path": "IOT/lib"
+		},
+		{
+			"path": "IOT/SRC"
+		},
+		{
+			"path": "IOT/Test"
+		}
+	]
+}
