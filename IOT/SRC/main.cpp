@@ -39,6 +39,8 @@ void setup()
         delay(10);
     }
     delay(1000);
+
+    randomSeed(analogread(a0)); // seed using an unconnected analog pin for real random
 }
 
 void loop()
@@ -47,14 +49,9 @@ void loop()
     mqttConnect();
 
     // 2. Transmit periodic telemetry (if required by design specification)
-    unsigned long now = millis();
-    if (now - lastUpdate > updateInterval)
-    {
-        lastUpdate = now;
-        // TODO: Insert customized sendDataToServer() calls here.
-    }
+   int randomNumber = random(1, 10001);
+   sendPeriodicUpdate("sensorData", String(randomNumber));
 
-    // 3. Yield execution time for PubSubClient processing
-    client.loop();
+    client.loop(); // Check for incomign messages and keep the connection alive
     delay(100);
 }
