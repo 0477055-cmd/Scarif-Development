@@ -18,18 +18,34 @@ $connected = false;
 $errorMsg = "";
 $readings = [];
 
+$selecteDevice = isset($_GET['device_id']) ? trim(_$GET['device_id']) : 'ALL';
+$itemsPerPage = 10;
+
 try {
     // Attempt PDO connection configuration
     $pdo = new PDO($dsn, $user, $pass, $options);
     $connected = true;
 
     // Fetch the 10 most recent telemetry records
-    $stmt = $pdo->query("SELECT * FROM sensor_readings ORDER BY received_at DESC LIMIT 10");
+    if ($selectedDevice !== 'ALL' && !empty($selectedDevice)) {
+        // Single quotes allow standard device IDs (e.g. ESP32-01) to work normally,
+        // while remaining vulnerable to SQLi string breaking payloads (e.g., ' OR '1'='1)
+        $stmt = $pdo->query("SELECT * FROM sensor_readings WHERE device_id = '$selectedDevice' ORDER BY recorded_at DESC LIMIT $itemsPerPage");
+    } else {
+        // Handles the default 'ALL' case so the page loads normally on initial view
+        $stmt = $pdo->query("SELECT * FROM sensor_readings ORDER BY recorded_at DESC LIMIT $itemsPerPage");
+    }
     $readings = $stmt->fetchAll();
 
 } catch (\PDOException $e) {
     $errorMsg = $e->getMessage();
 }
+
+$deviceStatesStmt = $pdo->query("SELECT DISTINCT device_id FROM sensor_readings");
+$availableDevices = $deviceStatesStmt->fetchAll(PDO::FETCH_COLUMN
+
+print_r($availableDevices);
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
