@@ -395,3 +395,14 @@ $availableDevices = $deviceStatesStmt->fetchAll(PDO::FETCH_COLUMN);
 </body>
 
 </html>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello World</title>
+</head>
+<body>
+    <?php
+        echo "Hello, World!";
+    ?>
+</body>
