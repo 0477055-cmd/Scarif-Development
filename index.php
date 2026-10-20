@@ -1,3 +1,12 @@
+
+<?php
+require_once 'auth.php';
+
+// Pass an array of all roles allowed to view this page
+authorise(['admin', 'staff']);
+?>
+
+// Page code continues below...
 <?php
 // src/index.php - System Landing Page & Navigation Hub
 session_start();
