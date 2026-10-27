@@ -1,8 +1,7 @@
 /*
 This file contains the communication logic for the development module, including MQTT setup, message handling, and periodic updates.
 
-DO NO CHANGE ANYTHING IN THIS FILE UNLESS YOU KNOW WHAT YOU ARE DOING, AS THIS FILE CONTAINS THE CORE COMMUNICATION LOGIC FOR THE MODULE.
-
+DO NOT CHANGE ANYTHING IN THIS FILE UNLESS YOU KNOW WHAT YOU ARE DOING, AS THIS FILE CONTAINS THE CORE COMMUNICATION LOGIC FOR THE MODULE.
 */
 
 #include <WiFi.h>
@@ -12,22 +11,22 @@ DO NO CHANGE ANYTHING IN THIS FILE UNLESS YOU KNOW WHAT YOU ARE DOING, AS THIS F
 // MQTT client setup
 WiFiClient espClient;
 PubSubClient client(espClient);
-String topicBuffer;
 
+// MQTT topic is now a String, which safely stores dynamically created topics
+String mqttTopic;
 
-// Replace with the MQTT broker IP address and port (default port for MQTT is 1883)
-const char* mqttServer = "192.168.1.116";  
+// Replace with the MQTT broker IP address and port
+// Default MQTT port is normally 1883
+const char* mqttServer = "192.168.1.116";
 const int mqttPort = 5883;
 
-
 unsigned long lastUpdate = 0;
-const unsigned long updateInterval = 5000; // Time between random number updates (5 seconds)
+const unsigned long updateInterval = 5000; // Time between periodic updates: 5 seconds
 
 void performActionBasedOnPayload(String payload);
 
 void wifiSetup()
 {
-
     WiFi.begin(ssid, password);
 
     while (WiFi.status() != WL_CONNECTED)
@@ -35,12 +34,11 @@ void wifiSetup()
         delay(1000);
         Serial.println("Connecting to WiFi..");
     }
+
     Serial.println();
-    Serial.print("Connected to WiFI. IP address: ");
+    Serial.print("Connected to WiFi. IP address: ");
     Serial.println(WiFi.localIP());
 }
-
-
 
 /*
   Use this to send data back to the MQTT broker.
@@ -55,7 +53,6 @@ void sendDataToServer(String topic, String message)
         Serial.print("]: ");
         Serial.println(message);
 
-        // Convert String to char array for the PubSubClient library
         client.publish(topic.c_str(), message.c_str());
     }
     else
@@ -66,19 +63,17 @@ void sendDataToServer(String topic, String message)
 
 void sendPeriodicUpdate(String topic, String dataToSend)
 {
-    // 1. Timer: Check if 5 seconds (updateInterval) have passed since the last update
+    // Only send once every updateInterval milliseconds
     unsigned long now = millis();
-    if (now - lastUpdate > updateInterval)
+
+    if (now - lastUpdate >= updateInterval)
     {
-        lastUpdate = now; // Reset the timer
+        lastUpdate = now;
 
-        // --- Next steps will go here ---
-
-        // 3. Topic: Construct the special update topic
-        // We use "updateChallenges/" so the server knows this is incoming data
+        // Construct the special update topic
         String updateTopic = topic + "/" + String(mqttClient);
 
-        // 4. Transmit: Use the helper function to send the data to the broker
+        // Send the data to the broker
         sendDataToServer(updateTopic, dataToSend);
     }
 }
@@ -86,12 +81,14 @@ void sendPeriodicUpdate(String topic, String dataToSend)
 void callback(char *topic, byte *payload, unsigned int length)
 {
     String message = "";
-    for (int i = 0; i < length; i++)
+
+    for (unsigned int i = 0; i < length; i++)
     {
         message += (char)payload[i];
     }
 
     String internalPrefix = "__INTERNAL__";
+
     if (message.startsWith(internalPrefix))
     {
         message = message.substring(internalPrefix.length());
@@ -105,25 +102,27 @@ void callback(char *topic, byte *payload, unsigned int length)
     performActionBasedOnPayload(message);
 }
 
-
 void mqttConnect()
 {
     while (!client.connected())
     {
         Serial.println("Connecting to MQTT...");
+
         if (client.connect(mqttClient))
         {
             Serial.println("Connected to MQTT");
-            // mqttTopic is "challenges/ESP32_Ryan"
-            client.subscribe(mqttTopic);
-            topicBuffer = "EventLog/" + String(mqttClient);
-            mqttTopic = topicBuffer.c_str();
-            sendDataToServer(mqttTopic, String(mqttClient) + " is online.");
+
+            // Subscribe to this ESP32's command topic
+            client.subscribe(mqttTopic.c_str());
+
+            // Send an online message to the event log
+            String eventTopic = "EventLog/" + String(mqttClient);
+            sendDataToServer(eventTopic, String(mqttClient) + " is online.");
         }
         else
         {
             Serial.print("Failed with state ");
-            Serial.print(client.state());
+            Serial.println(client.state());
             delay(2000);
         }
     }
@@ -132,11 +131,9 @@ void mqttConnect()
 void mqttSetup()
 {
     // Construct the MQTT topic dynamically
-    topicBuffer = "devicePayload/" + String(mqttClient);
-    mqttTopic = topicBuffer.c_str();
+    mqttTopic = "devicePayload/" + String(mqttClient);
 
     client.setServer(mqttServer, mqttPort);
     client.setCallback(callback);
     mqttConnect();
 }
-
